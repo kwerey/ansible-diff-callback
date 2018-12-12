@@ -1,7 +1,7 @@
-test_file_first:
+one:
   path: ~/git/utility/callback/tests/test_file
   contents: "This is version A"
 
-test_file_second:
+two:
   path: ~/git/utility/callback/tests/test_file
   contents: "Now it's version B"

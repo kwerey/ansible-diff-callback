@@ -1,2 +1,3 @@
 [testing]
-localhost ansible_connection=local
+test-host-1 ansible_connection=local
+test-host-2 ansible_connection=local

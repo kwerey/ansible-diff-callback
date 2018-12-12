@@ -1,23 +1,23 @@
 ---
 
 - name: Write a file with one set of contents, then another.
-  hosts: localhost
+  hosts: all
 
   tasks:
 
-  - name: Version A
+  - name: Template out Version A
     lineinfile:
-      path: "{{ test_file_first.path }}"
+      path: "{{ one.path }}"
       state: present
       create: yes
-      line: "{{ test_file_first.contents }}"
+      line: "{{ one.contents }}"
       regexp: ".*version.*"
     register: a
 
-  - name: Version B
+  - name: Template out Version B
     lineinfile:
-      path: "{{ test_file_second.path }}"
+      path: "{{ two.path }}"
       state: present
       create: yes
-      line: "{{ test_file_second.contents }}"
+      line: "{{ two.contents }}"
       regexp: ".*version.*"

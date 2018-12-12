@@ -15,7 +15,7 @@ class CallbackModule(CallbackBase):
 
   def __init__(self, display=None):
     super(CallbackModule, self).__init__(display)
-    self.results = []
+    self.results = {}
 
   def v2_on_file_diff(self, result):
     """When the playbook ran in diff mode, collect results"""
@@ -23,19 +23,40 @@ class CallbackModule(CallbackBase):
     if 'diff' in result._result:
       host = result._host.get_name()
 
-      self.results.append(result._result['diff'])
+      diff = {}
+      diff_contents = result._result['diff']
+
+      """Construct a dict with the target changed as the dict name, and the before and after state as keys/value pairs."""
+
+      for item in diff_contents:
+
+        if 'before' in item:
+          before = item['before']
+        else:
+          before = ''
+
+        if 'after' in item:
+          after = item['after']
+        else:
+          after = ''
+
+        changeset = {
+          item['after_header']: {
+            'before': before,
+            'after': after
+          }
+        }
+
+        diff.update(changeset)
+
+      self.results.update( { host : diff } )
 
   def v2_playbook_on_stats(self, stats):
-    """Display info about playbook statistics"""
+    """Display info about changes"""
 
     output = {
-      'plays': self.results,
+      'changes': self.results
     }
-    # output = {
-    #
-    #     'stats': summary,
-    #     'custom_stats': custom_stats,
-    #     'global_custom_stats': global_custom_stats,
-    # }
+
 
     self._display.display(json.dumps(output, cls=AnsibleJSONEncoder, indent=4, sort_keys=True))

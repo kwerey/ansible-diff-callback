@@ -1,0 +1,7 @@
+one:
+  path: ~/git/utility/callback/tests/host2file
+  contents: "we made a new file"
+
+two:
+  path: ~/git/utility/callback/tests/host2file2
+  contents: "we made another new file!!"

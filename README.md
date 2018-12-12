@@ -105,45 +105,42 @@ A playbook to lineinfile them one over the other:
 
 a callback_plugin directory adjacent to the playbook, with the callback plugin in progress. This can currently grab diffs when run in diff mode, and collect them in a list.
 
+Currently, output looks like this
 ```
 $ ansible-playbook -i hosts template.yml --diff
 {
-    "plays": [
-        [
-            {
-                "after": "This is version A\n",
-                "after_header": "/Users/nbailey/git/utility/callback/tests/test_file (content)",
-                "before": "",
-                "before_header": "/Users/nbailey/git/utility/callback/tests/test_file (content)"
-            },
-            {
-                "after_header": "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)",
-                "before_header": "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)"
-            }
-        ],
-        [
-            {
+    "changes": {
+        "test-host-1": {
+            "/Users/nbailey/git/utility/callback/tests/test_file (content)": {
                 "after": "Now it's version B\n",
-                "after_header": "/Users/nbailey/git/utility/callback/tests/test_file (content)",
-                "before": "This is version A\n",
-                "before_header": "/Users/nbailey/git/utility/callback/tests/test_file (content)"
+                "before": "This is version A\n"
             },
-            {
-                "after_header": "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)",
-                "before_header": "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)"
+            "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)": {
+                "after": "",
+                "before": ""
             }
-        ]
-    ]
+        },
+        "test-host-2": {
+            "/Users/nbailey/git/utility/callback/tests/host2file2 (content)": {
+                "after": "we made another new file!!\n",
+                "before": ""
+            },
+            "/Users/nbailey/git/utility/callback/tests/host2file2 (file attributes)": {
+                "after": "",
+                "before": ""
+            }
+        }
+    }
 }
 ```
 
 ## To be done
 
-Next: Grab task names and format output so it displays changes in order by named task
-
-Then: Support running against as many hosts as are in inventory
+Next: check how this looks in a couple of different situations
 
 Then: See if there's a way to enable the plugin only when running in check mode
+
+Thank about YAML output? https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/yaml.py
 
 Think about workflow:
 
