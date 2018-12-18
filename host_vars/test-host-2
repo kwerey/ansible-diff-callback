@@ -3,5 +3,5 @@ one:
   contents: "Now it's version 1"
 
 two:
-  path: ~/git/utility/callback/tests/host2file
+  path: ~/git/utility/callback/tests/host2file  
   contents: "But it's changed to version 2!!"

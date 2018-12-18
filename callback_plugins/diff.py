@@ -76,16 +76,19 @@ class CallbackModule(CallbackBase):
     if host not in self.results:
       self.results.update( { host : { "changed": "false" } } )
 
-    # contains only {"changed": true, "censored": "the output has been hidden due to the fact that 'no_log: true' was specified for this result"} for no_log tasks
-    # I'm not clear how you can get the path to the file that was modified by no-log without running with -vvvv so _dump_result contains invocation keys?
+    """If no_log is set, add a result to indicate that changes have been redacted"""
+    # TODO: provide filepath or name of the task so there's context for what was no_log'd.
     if 'censored' in result._result:
+      # Maybe something in result data can do that at this point:
+      # self._display.display(yaml.dump(result._task._attributes['name']))
       no_log_results = {
-        "censorship!": "censored"
+        "redacted": {
+          "redacted_change": result._result['censored']
+        }
       }
-
-      self.results[host].update( { "changed" : result._result['changed'] } )
       self.results[host].update(no_log_results)
 
+    """If there is a diff, construct a dict from it with before and after"""
     if 'diff' in result._result:
       diff = {}
       diff_contents = result._result['diff']
@@ -104,14 +107,15 @@ class CallbackModule(CallbackBase):
         else:
           after = ''
 
-        changeset = {
-          item['after_header']: {
-            'before': before,
-            'after': after
-          }
-        }
+        if before != after:
 
-        diff.update(changeset)
+          changeset = {
+            item['after_header']: {
+              'before': before,
+              'after': after
+            }
+          }
+          diff.update(changeset)
 
       self.results[host].update(diff)
 
