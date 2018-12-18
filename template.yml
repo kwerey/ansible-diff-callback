@@ -11,8 +11,9 @@
       state: present
       create: yes
       line: "{{ one.contents }}"
-      regexp: ".*version.*"
+      regexp: "^.*version"
     register: a
+    no_log: true
 
   - name: Template out Version B
     lineinfile:
@@ -20,4 +21,4 @@
       state: present
       create: yes
       line: "{{ two.contents }}"
-      regexp: ".*version.*"
+      regexp: "^.*version"

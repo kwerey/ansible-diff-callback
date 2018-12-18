@@ -1,7 +1,7 @@
 one:
   path: ~/git/utility/callback/tests/test_file
-  contents: "This is version A"
+  contents: "This is version C"
 
 two:
   path: ~/git/utility/callback/tests/test_file
-  contents: "Now it's version B"
+  contents: "Now it's version F"
