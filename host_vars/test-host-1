@@ -1,7 +1,9 @@
 one:
   path: ~/git/utility/callback/tests/test_file
   contents: "This is version C"
+  mode: 755
 
 two:
   path: ~/git/utility/callback/tests/test_file
   contents: "Now it's version F"
+  mode: 777

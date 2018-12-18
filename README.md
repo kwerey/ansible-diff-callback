@@ -15,56 +15,36 @@ Value proposition:
 - As a concise audit log of when changes were pushed.
 - As a final typo-proofreading opportunity for the person pushing the update
 
-## Example successful end state
+## Current state
 
-Something along these lines
-
-```
-host1:
----
-Files changed:
-/Users/nbailey/git/utility/callback/tests/test_file
-/Users/nbailey/git/utility/callback/tests/another_test_file
-
---- before: /Users/nbailey/git/utility/callback/tests/test_file (content)
-+++ after: /Users/nbailey/git/utility/callback/tests/test_file (content)
-@@ -1 +1 @@
--Now it's version B
-+This is version A
-
---- before: /Users/nbailey/git/utility/callback/tests/another_test_file (content)
-+++ after: /Users/nbailey/git/utility/callback/tests/another_test_file (content)
-@@ -1 +1 @@
--Now it's version B
-+This is version A
-
-host2:
----
-Files changed:
-/Users/nbailey/git/utility/callback/tests/test_file
-
---- before: /Users/nbailey/git/utility/callback/tests/test_file (content)
-+++ after: /Users/nbailey/git/utility/callback/tests/test_file (content)
-@@ -1 +1 @@
--Now it's version B
+Right now, output looks like this
 
 ```
-
-## Reference
-
-Callback plugins seem to be the right place to do this:
-- https://docs.ansible.com/ansible/2.6/plugins/callback.html
-- https://docs.ansible.com/ansible/2.6/dev_guide/developing_plugins.html#callback-plugins
-
-This link has some good simple starting points: https://dev.to/jrop/creating-an-alerting-callback-plugin-in-ansible---part-i-1h0n
-
-There’s an on_file_diff class we can override: https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/__init__.py#L334
+$ ansible-playbook -i hosts template.yml --diff
+changes:
+  test-host-1:
+    /Users/nbailey/git/utility/callback/tests/test_file (content):
+      after: |-
+        Now it's version F
+      before: |-
+        This is version C
+    changed: 'false'
+    redacted:
+      redacted_change: 'the output has been hidden due to the fact that ''no_log: true'' was specified for this result'
+  test-host-2:
+    /Users/nbailey/git/utility/callback/tests/host2file (content):
+      after: |-
+        But it's changed to version 2!!
+      before: |-
+        Now it's version 1
+    changed: 'false'
+    redacted:
+      redacted_change: 'the output has been hidden due to the fact that ''no_log: true'' was specified for this result'
+```
 
 ## What's in this repo?
 
-The starting point is a little test sandbox with the following:
-
-host_vars for localhost
+The starting point is a little test sandbox with hosts that have inventory to swap a file between states:
 
 ```
 test_file_first:
@@ -76,7 +56,7 @@ test_file_second:
   contents: "Now it's version B"
 ```
 
-A playbook to lineinfile them one over the other:
+And playbook to lineinfile those one over the other:
 ---
 
 ```
@@ -103,50 +83,36 @@ A playbook to lineinfile them one over the other:
       regexp: ".*version.*"
 ```
 
-a callback_plugin directory adjacent to the playbook, with the callback plugin in progress. This can currently grab diffs when run in diff mode, and collect them in a list.
+a callback_plugin directory adjacent to the playbook, with the callback plugin in progress. This removes normal playbook output and overrides the 'on file diff' class and constructs a data structure showing diffs for each host.
 
-Currently, output looks like this
-```
-$ ansible-playbook -i hosts template.yml --diff
-{
-    "changes": {
-        "test-host-1": {
-            "/Users/nbailey/git/utility/callback/tests/test_file (content)": {
-                "after": "Now it's version B\n",
-                "before": "This is version A\n"
-            },
-            "/Users/nbailey/git/utility/callback/tests/test_file (file attributes)": {
-                "after": "",
-                "before": ""
-            }
-        },
-        "test-host-2": {
-            "/Users/nbailey/git/utility/callback/tests/host2file2 (content)": {
-                "after": "we made another new file!!\n",
-                "before": ""
-            },
-            "/Users/nbailey/git/utility/callback/tests/host2file2 (file attributes)": {
-                "after": "",
-                "before": ""
-            }
-        }
-    }
-}
-```
 
 ## To be done
 
-Next: check how this looks in a couple of different situations
+### Next
 
-Then: See if there's a way to enable the plugin only when running in check mode
+Validate how this looks in a couple of different situations (multiline files, new files/directories, deletions)
 
-Thank about YAML output? https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/yaml.py
+### Also
 
-Think about workflow:
+- Colourized diff lines? like this https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/__init__.py#L179
 
-- should this be a plugin that replaces stdout, or prepends results to the top, or should we write the normal play output to a log file and then cat it at the end of the job for further info?
-- Can I make this more graceful by disabling it when diff mode is not enabled? (right now, it'll just place all playbook output with an empty list when there's no diff results to be had)
+- Think about workflow:
 
+  - should this be a plugin that replaces stdout, or prepends results to the top, or should we write the normal play output to a log file and then cat it at the end of the job for further info?
+  - Can I make this more graceful by disabling it when diff mode is not enabled? (right now, it'll just place all playbook output with an empty list when there's no diff results to be had)
+  - see if there's a way to enable the plugin only when running in check mode?
+
+  => Current thinking, it doesn't seem to be easily to gracefully return the stdout callback to default. I'll just set Jenkins up to only enable this for individual plays.
+
+## Reference
+
+Callback plugins seem to be the right place to do this:
+- https://docs.ansible.com/ansible/2.6/plugins/callback.html
+- https://docs.ansible.com/ansible/2.6/dev_guide/developing_plugins.html#callback-plugins
+
+This link has some good simple starting points: https://dev.to/jrop/creating-an-alerting-callback-plugin-in-ansible---part-i-1h0n
+
+There’s an on_file_diff class we can override: https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/__init__.py#L334
 
 ## Misc things learned
 

@@ -16,10 +16,46 @@ DOCUMENTATION = '''
 '''
 
 import json
+import yaml
+import string
+import re
 
 from ansible.plugins.callback import CallbackBase
 from ansible.inventory.host import Host
 from ansible.parsing.ajson import AnsibleJSONEncoder
+from ansible.parsing.yaml.dumper import AnsibleDumper
+
+# From https://github.com/ansible/ansible/blob/devel/lib/ansible/plugins/callback/yaml.py
+def my_represent_scalar(self, tag, value, style=None):
+    """Uses block style for multi-line strings"""
+    if style is None:
+        if should_use_block(value):
+            style = '|'
+            # we care more about readable than accuracy, so...
+            # ...no trailing space
+            value = value.rstrip()
+            # ...and non-printable characters
+            value = ''.join(x for x in value if x in string.printable)
+            # ...tabs prevent blocks from expanding
+            value = value.expandtabs()
+            # ...and odd bits of whitespace
+            value = re.sub(r'[\x0b\x0c\r]', '', value)
+            # ...as does trailing space
+            value = re.sub(r' +\n', '\n', value)
+        else:
+            style = self.default_style
+    node = yaml.representer.ScalarNode(tag, value, style=style)
+    if self.alias_key is not None:
+        self.represented_objects[self.alias_key] = node
+    return node
+
+# from http://stackoverflow.com/a/15423007/115478
+def should_use_block(value):
+    """Returns true if string should be in block format"""
+    for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
+        if c in value:
+            return True
+    return False
 
 class CallbackModule(CallbackBase):
   CALLBACK_VERSION = 2.0
@@ -29,6 +65,7 @@ class CallbackModule(CallbackBase):
   def __init__(self, display=None):
     super(CallbackModule, self).__init__(display)
 
+    yaml.representer.BaseRepresenter.represent_scalar = my_represent_scalar
     self.results = {}
 
   def v2_on_file_diff(self, result):
@@ -39,16 +76,19 @@ class CallbackModule(CallbackBase):
     if host not in self.results:
       self.results.update( { host : { "changed": "false" } } )
 
-    # contains only {"changed": true, "censored": "the output has been hidden due to the fact that 'no_log: true' was specified for this result"} for no_log tasks
-    # I'm not clear how you can get the path to the file that was modified by no-log without running with -vvvv so _dump_result contains invocation keys?
+    """If no_log is set, add a result to indicate that changes have been redacted"""
+    # TODO: provide filepath or name of the task so there's context for what was no_log'd.
     if 'censored' in result._result:
+      # Maybe something in result data can do that at this point:
+      # self._display.display(yaml.dump(result._task._attributes['name']))
       no_log_results = {
-        "censorship!": "censored"
+        "redacted": {
+          "redacted_change": result._result['censored']
+        }
       }
-
-      self.results[host].update( { "changed" : result._result['changed'] } )
       self.results[host].update(no_log_results)
 
+    """If there is a diff, construct a dict from it with before and after"""
     if 'diff' in result._result:
       diff = {}
       diff_contents = result._result['diff']
@@ -67,14 +107,15 @@ class CallbackModule(CallbackBase):
         else:
           after = ''
 
-        changeset = {
-          item['after_header']: {
-            'before': before,
-            'after': after
-          }
-        }
+        if before != after:
 
-        diff.update(changeset)
+          changeset = {
+            item['after_header']: {
+              'before': before,
+              'after': after
+            }
+          }
+          diff.update(changeset)
 
       self.results[host].update(diff)
 
@@ -84,4 +125,4 @@ class CallbackModule(CallbackBase):
     output = {
       'changes': self.results
     }
-    self._display.display(json.dumps(output, cls=AnsibleJSONEncoder, indent=4, sort_keys=True))
+    self._display.display(yaml.dump(output, allow_unicode=True, width=1000, Dumper=AnsibleDumper, default_flow_style=False))
